@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # FreeDL — Download Manager Engine
 
 A Python download manager modelled after FDM (Free Download Manager) with:
@@ -138,3 +139,6 @@ python cli.py serve               # start web server
 - **Persistence**: Add SQLite via `sqlite3` in `DownloadEngine._tasks` to survive restarts.
 - **Auth**: Add Flask-Login or JWT to the API for multi-user setups.
 - **Scheduling**: Add `start_time` field and check it in `_schedule_loop`.
+=======
+# NJ-s-Downloader
+>>>>>>> 206e7305e28dfbf910c7cf208c1cd87d9ef59ebf
