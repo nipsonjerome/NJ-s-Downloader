@@ -1,0 +1,892 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>NJ's Downloader — Download Manager</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --bg:        #0d0f14;
+    --surface:   #141720;
+    --surface2:  #1c2030;
+    --border:    #252a3a;
+    --accent:    #3b82f6;
+    --accent2:   #6366f1;
+    --success:   #22c55e;
+    --warn:      #f59e0b;
+    --danger:    #ef4444;
+    --text:      #e2e8f0;
+    --muted:     #64748b;
+    --mono:      'JetBrains Mono', monospace;
+    --sans:      'Inter', sans-serif;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: var(--sans);
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ── Header ── */
+  header {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 14px 24px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    position: sticky; top: 0; z-index: 50;
+  }
+  .logo { display: flex; align-items: center; gap: 10px; }
+  .logo-icon {
+    width: 32px; height: 32px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px;
+  }
+  .logo-text { font-size: 16px; font-weight: 600; letter-spacing: -0.3px; }
+  .logo-text span { color: var(--accent); }
+
+  header .spacer { flex: 1; }
+
+  .header-stats {
+    display: flex; gap: 20px; align-items: center;
+    font-size: 12px; color: var(--muted);
+    font-family: var(--mono);
+  }
+  .stat-pill {
+    display: flex; align-items: center; gap: 5px;
+    padding: 4px 10px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+  }
+  .stat-pill .dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--success);
+    animation: pulse 2s infinite;
+  }
+  @keyframes pulse {
+    0%,100% { opacity:1; } 50% { opacity:.3; }
+  }
+
+  /* ── Layout ── */
+  .app { display: flex; flex: 1; min-height: 0; }
+
+  /* ── Sidebar ── */
+  aside {
+    width: 200px; min-width: 200px;
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    padding: 16px 0;
+    display: flex; flex-direction: column; gap: 2px;
+  }
+  .sidebar-label {
+    font-size: 10px; font-weight: 600;
+    text-transform: uppercase; letter-spacing: 1px;
+    color: var(--muted);
+    padding: 10px 16px 4px;
+  }
+  .nav-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 8px 16px;
+    font-size: 13px; color: var(--muted);
+    cursor: pointer; border-radius: 0;
+    transition: all .15s;
+    border-left: 2px solid transparent;
+  }
+  .nav-item:hover { color: var(--text); background: var(--surface2); }
+  .nav-item.active {
+    color: var(--accent);
+    border-left-color: var(--accent);
+    background: rgba(59,130,246,.08);
+  }
+  .nav-badge {
+    margin-left: auto;
+    font-size: 10px; font-weight: 600;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 1px 6px;
+    font-family: var(--mono);
+  }
+  .nav-item.active .nav-badge {
+    background: rgba(59,130,246,.2);
+    border-color: rgba(59,130,246,.4);
+    color: var(--accent);
+  }
+
+  /* ── Main content ── */
+  main {
+    flex: 1; min-width: 0;
+    display: flex; flex-direction: column;
+    overflow: hidden;
+  }
+
+  /* ── Toolbar ── */
+  .toolbar {
+    display: flex; align-items: center; gap: 10px;
+    padding: 12px 20px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+  }
+  .btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 7px 14px;
+    font-size: 13px; font-weight: 500;
+    border: none; border-radius: 6px;
+    cursor: pointer; transition: all .15s;
+  }
+  .btn-primary {
+    background: var(--accent);
+    color: #fff;
+  }
+  .btn-primary:hover { background: #2563eb; }
+  .btn-ghost {
+    background: var(--surface2);
+    color: var(--text);
+    border: 1px solid var(--border);
+  }
+  .btn-ghost:hover { border-color: var(--accent); color: var(--accent); }
+  .btn-danger { background: rgba(239,68,68,.15); color: var(--danger); border: 1px solid rgba(239,68,68,.2); }
+  .btn-danger:hover { background: rgba(239,68,68,.25); }
+
+  .search-box {
+    flex: 1; max-width: 300px;
+    display: flex; align-items: center;
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 6px; padding: 0 10px; gap: 8px;
+  }
+  .search-box input {
+    background: none; border: none; outline: none;
+    color: var(--text); font-size: 13px; padding: 7px 0;
+    flex: 1; font-family: var(--sans);
+  }
+  .search-box input::placeholder { color: var(--muted); }
+
+  /* ── Download list ── */
+  .download-list {
+    flex: 1; overflow-y: auto;
+    padding: 16px 20px;
+    display: flex; flex-direction: column; gap: 8px;
+  }
+
+  .dl-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px 16px;
+    transition: border-color .15s;
+    position: relative; overflow: hidden;
+  }
+  .dl-card:hover { border-color: #2e364f; }
+  .dl-card.downloading { border-left: 3px solid var(--accent); }
+  .dl-card.completed   { border-left: 3px solid var(--success); }
+  .dl-card.failed      { border-left: 3px solid var(--danger); }
+  .dl-card.paused      { border-left: 3px solid var(--warn); }
+  .dl-card.queued      { border-left: 3px solid var(--muted); }
+
+  .dl-top {
+    display: flex; align-items: flex-start; gap: 10px;
+    margin-bottom: 10px;
+  }
+  .dl-icon {
+    width: 36px; height: 36px; flex-shrink: 0;
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+  }
+  .dl-info { flex: 1; min-width: 0; }
+  .dl-name {
+    font-size: 13px; font-weight: 500;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    margin-bottom: 2px;
+  }
+  .dl-url {
+    font-size: 11px; color: var(--muted);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    font-family: var(--mono);
+  }
+  .dl-actions {
+    display: flex; gap: 4px; flex-shrink: 0;
+  }
+  .icon-btn {
+    width: 28px; height: 28px;
+    display: flex; align-items: center; justify-content: center;
+    border: 1px solid var(--border);
+    background: var(--surface2);
+    border-radius: 6px; cursor: pointer;
+    font-size: 13px; color: var(--muted);
+    transition: all .15s;
+  }
+  .icon-btn:hover { color: var(--text); border-color: var(--accent); }
+  .icon-btn.danger:hover { color: var(--danger); border-color: var(--danger); }
+
+  /* progress */
+  .dl-progress-row {
+    display: flex; align-items: center; gap: 10px;
+    margin-bottom: 6px;
+  }
+  .dl-bar-wrap {
+    flex: 1; height: 4px;
+    background: var(--surface2);
+    border-radius: 2px; overflow: hidden;
+  }
+  .dl-bar {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+    border-radius: 2px;
+    transition: width .4s ease;
+  }
+  .dl-pct {
+    font-size: 11px; font-family: var(--mono);
+    color: var(--muted); min-width: 40px; text-align: right;
+  }
+
+  .dl-meta {
+    display: flex; gap: 16px;
+    font-size: 11px; font-family: var(--mono); color: var(--muted);
+  }
+  .dl-meta span { display: flex; align-items: center; gap: 4px; }
+
+  .status-badge {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 2px 7px; border-radius: 10px;
+    font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: .5px;
+  }
+  .status-badge.downloading { background:rgba(59,130,246,.15); color:var(--accent); }
+  .status-badge.completed   { background:rgba(34,197,94,.15);  color:var(--success); }
+  .status-badge.failed      { background:rgba(239,68,68,.15);  color:var(--danger); }
+  .status-badge.paused      { background:rgba(245,158,11,.15); color:var(--warn); }
+  .status-badge.queued      { background:rgba(100,116,139,.15);color:var(--muted); }
+  .status-badge.cancelled   { background:rgba(100,116,139,.1); color:var(--muted); }
+
+  /* ── Empty state ── */
+  .empty {
+    flex: 1; display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    gap: 12px; color: var(--muted);
+    padding: 60px 20px;
+  }
+  .empty-icon { font-size: 48px; opacity: .4; }
+  .empty h3 { font-size: 16px; font-weight: 500; color: var(--text); }
+  .empty p  { font-size: 13px; text-align: center; max-width: 320px; line-height: 1.6; }
+
+  /* ── Modal ── */
+  .modal-overlay {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,.7);
+    backdrop-filter: blur(4px);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 100;
+    opacity: 0; pointer-events: none;
+    transition: opacity .2s;
+  }
+  .modal-overlay.open { opacity: 1; pointer-events: all; }
+  .modal {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 24px;
+    width: 100%; max-width: 520px;
+    transform: translateY(10px);
+    transition: transform .2s;
+    box-shadow: 0 24px 64px rgba(0,0,0,.5);
+  }
+  .modal-overlay.open .modal { transform: translateY(0); }
+  .modal-header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 20px;
+  }
+  .modal-title { font-size: 16px; font-weight: 600; }
+  .modal-close {
+    width: 28px; height: 28px;
+    display: flex; align-items: center; justify-content: center;
+    border: 1px solid var(--border); background: var(--surface2);
+    border-radius: 6px; cursor: pointer; color: var(--muted);
+    font-size: 14px;
+  }
+  .modal-close:hover { color: var(--text); }
+
+  .form-group { margin-bottom: 14px; }
+  .form-label {
+    display: block; font-size: 12px; font-weight: 500;
+    color: var(--muted); margin-bottom: 6px;
+    text-transform: uppercase; letter-spacing: .5px;
+  }
+  .form-input {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 7px;
+    padding: 9px 12px;
+    font-size: 13px; color: var(--text);
+    font-family: var(--sans);
+    transition: border-color .15s;
+  }
+  .form-input:focus { outline: none; border-color: var(--accent); }
+  .form-input::placeholder { color: var(--muted); }
+
+  .form-row { display: flex; gap: 12px; }
+  .form-row .form-group { flex: 1; }
+
+  select.form-input {
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%2364748b' d='M6 8L0 0h12z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    padding-right: 32px;
+  }
+
+  .tab-bar {
+    display: flex; gap: 2px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 7px; padding: 3px;
+    margin-bottom: 18px;
+  }
+  .tab-btn {
+    flex: 1; padding: 6px 12px;
+    font-size: 12px; font-weight: 500;
+    border: none; background: none;
+    color: var(--muted); cursor: pointer;
+    border-radius: 5px; transition: all .15s;
+    font-family: var(--sans);
+  }
+  .tab-btn.active {
+    background: var(--surface); color: var(--text);
+    box-shadow: 0 1px 3px rgba(0,0,0,.3);
+  }
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+
+  .file-drop {
+    border: 2px dashed var(--border);
+    border-radius: 8px;
+    padding: 28px;
+    text-align: center;
+    color: var(--muted);
+    font-size: 13px;
+    cursor: pointer;
+    transition: border-color .15s;
+  }
+  .file-drop:hover, .file-drop.drag-over {
+    border-color: var(--accent);
+    color: var(--text);
+  }
+  .file-drop .drop-icon { font-size: 28px; margin-bottom: 8px; }
+
+  .modal-footer {
+    display: flex; justify-content: flex-end; gap: 8px;
+    margin-top: 20px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border);
+  }
+
+  /* ── Toast ── */
+  #toast-container {
+    position: fixed; bottom: 20px; right: 20px;
+    display: flex; flex-direction: column; gap: 8px;
+    z-index: 200;
+  }
+  .toast {
+    display: flex; align-items: center; gap: 10px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-size: 13px;
+    box-shadow: 0 4px 16px rgba(0,0,0,.4);
+    animation: slideIn .2s ease;
+    max-width: 320px;
+  }
+  @keyframes slideIn {
+    from { transform: translateX(20px); opacity: 0; }
+    to   { transform: translateX(0);    opacity: 1; }
+  }
+  .toast.success { border-left: 3px solid var(--success); }
+  .toast.error   { border-left: 3px solid var(--danger); }
+  .toast.info    { border-left: 3px solid var(--accent); }
+
+  /* scrollbar */
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+  /* segment visualiser */
+  .seg-vis {
+    height: 3px; background: var(--surface2);
+    border-radius: 2px; overflow: hidden;
+    display: flex; margin-top: 4px;
+  }
+  .seg-fill { background: var(--accent2); height: 100%; transition: width .3s; }
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<header>
+  <div class="logo">
+    <div class="logo-icon">⬇</div>
+    <div class="logo-text">NJ's<span>DL</span></div>
+  </div>
+  <div class="spacer"></div>
+  <div class="header-stats">
+    <div class="stat-pill">
+      <div class="dot"></div>
+      <span id="hdr-active">0 active</span>
+    </div>
+    <div class="stat-pill">↓ <span id="hdr-speed">0 B/s</span></div>
+    <div class="stat-pill">🗂 <span id="hdr-total">0 files</span></div>
+  </div>
+</header>
+
+<div class="app">
+  <!-- Sidebar -->
+  <aside>
+    <div class="sidebar-label">Downloads</div>
+    <div class="nav-item active" data-filter="all">📋 All Files <span class="nav-badge" id="badge-all">0</span></div>
+    <div class="nav-item" data-filter="downloading">⬇ Active <span class="nav-badge" id="badge-downloading">0</span></div>
+    <div class="nav-item" data-filter="queued">⏳ Queued <span class="nav-badge" id="badge-queued">0</span></div>
+    <div class="nav-item" data-filter="completed">✅ Completed <span class="nav-badge" id="badge-completed">0</span></div>
+    <div class="nav-item" data-filter="paused">⏸ Paused <span class="nav-badge" id="badge-paused">0</span></div>
+    <div class="nav-item" data-filter="failed">❌ Failed <span class="nav-badge" id="badge-failed">0</span></div>
+
+    <div class="sidebar-label" style="margin-top:8px">Categories</div>
+    <div class="nav-item" data-filter="cat-General">📁 General</div>
+    <div class="nav-item" data-filter="cat-Video">🎬 Video</div>
+    <div class="nav-item" data-filter="cat-Audio">🎵 Audio</div>
+    <div class="nav-item" data-filter="cat-Documents">📄 Documents</div>
+    <div class="nav-item" data-filter="cat-Torrent">🔄 Torrents</div>
+  </aside>
+
+  <!-- Main -->
+  <main>
+    <div class="toolbar">
+      <button class="btn btn-primary" id="btn-add-download">＋ New Download</button>
+      <button class="btn btn-ghost" id="btn-pause-all">⏸ Pause All</button>
+      <button class="btn btn-ghost" id="btn-resume-all">▶ Resume All</button>
+      <div class="spacer" style="flex:1"></div>
+      <div class="search-box">
+        <span style="color:var(--muted)">🔍</span>
+        <input type="text" id="search-input" placeholder="Search downloads…" />
+      </div>
+    </div>
+
+    <div class="download-list" id="download-list"></div>
+  </main>
+</div>
+
+<!-- Add Download Modal -->
+<div class="modal-overlay" id="modal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">Add Download</div>
+      <div class="modal-close" id="modal-close">✕</div>
+    </div>
+
+    <div class="tab-bar">
+      <button class="tab-btn active" data-tab="http">HTTP / FTP</button>
+      <button class="tab-btn" data-tab="magnet">Magnet</button>
+      <button class="tab-btn" data-tab="torrent">.torrent File</button>
+    </div>
+
+    <!-- HTTP tab -->
+    <div class="tab-panel active" id="tab-http">
+      <div class="form-group">
+        <label class="form-label">URL</label>
+        <input class="form-input" id="input-url" type="url" placeholder="https://example.com/file.zip" />
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Save as</label>
+          <input class="form-input" id="input-filename" type="text" placeholder="(auto-detect)" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Category</label>
+          <select class="form-input" id="input-category">
+            <option>General</option>
+            <option>Video</option>
+            <option>Audio</option>
+            <option>Documents</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Threads (segments)</label>
+        <input class="form-input" id="input-threads" type="range" min="1" max="16" value="8"
+               oninput="document.getElementById('threads-val').textContent=this.value" />
+        <div style="font-size:11px;color:var(--muted);margin-top:4px">
+          <span id="threads-val">8</span> segments
+        </div>
+      </div>
+    </div>
+
+    <!-- Magnet tab -->
+    <div class="tab-panel" id="tab-magnet">
+      <div class="form-group">
+        <label class="form-label">Magnet Link</label>
+        <input class="form-input" id="input-magnet" type="text" placeholder="magnet:?xt=urn:btih:…" />
+      </div>
+    </div>
+
+    <!-- Torrent file tab -->
+    <div class="tab-panel" id="tab-torrent">
+      <div class="file-drop" id="torrent-drop" onclick="document.getElementById('torrent-file').click()">
+        <div class="drop-icon">📂</div>
+        <div>Drop a .torrent file here or click to browse</div>
+        <input type="file" id="torrent-file" accept=".torrent" style="display:none" />
+      </div>
+      <div id="torrent-selected" style="font-size:12px;color:var(--muted);margin-top:8px;"></div>
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn btn-ghost" id="modal-cancel">Cancel</button>
+      <button class="btn btn-primary" id="modal-submit">Start Download</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast container -->
+<div id="toast-container"></div>
+
+<script>
+// ── State ────────────────────────────────────────────────────────────────
+const API = window.location.origin + '/api';
+let allTasks    = [];
+let allTorrents = [];
+let currentFilter = 'all';
+let searchQuery   = '';
+
+// ── API helpers ──────────────────────────────────────────────────────────
+async function apiPost(path, body = {}) {
+  const r = await fetch(API + path, {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify(body)
+  });
+  return r.json();
+}
+async function apiDel(path) {
+  const r = await fetch(API + path, { method: 'DELETE' });
+  return r.json();
+}
+
+// ── SSE live updates ─────────────────────────────────────────────────────
+function startSSE() {
+  const es = new EventSource(API + '/events');
+  es.onmessage = e => {
+    const data = JSON.parse(e.data);
+    allTasks    = data.downloads || [];
+    allTorrents = data.torrents  || [];
+    render();
+  };
+  es.onerror = () => {
+    // fallback: poll every 2s if SSE fails
+    es.close();
+    setInterval(pollFallback, 2000);
+  };
+}
+async function pollFallback() {
+  const r = await fetch(API + '/downloads');
+  const d = await r.json();
+  allTasks    = d.downloads || [];
+  allTorrents = d.torrents  || [];
+  render();
+}
+
+// ── Render ───────────────────────────────────────────────────────────────
+function fileIcon(name = '') {
+  const ext = (name.split('.').pop() || '').toLowerCase();
+  const map = {
+    mp4:'🎬', mkv:'🎬', avi:'🎬', mov:'🎬',
+    mp3:'🎵', flac:'🎵', wav:'🎵', aac:'🎵',
+    pdf:'📄', doc:'📄', docx:'📄', txt:'📄', epub:'📄',
+    zip:'📦', rar:'📦', '7z':'📦', tar:'📦', gz:'📦',
+    jpg:'🖼', jpeg:'🖼', png:'🖼', gif:'🖼', webp:'🖼',
+    exe:'⚙', msi:'⚙', dmg:'⚙', apk:'📱',
+    torrent:'🔄',
+  };
+  return map[ext] || '📁';
+}
+
+function fmtBytes(n) {
+  if (!n || n <= 0) return '—';
+  const u = ['B','KB','MB','GB','TB'];
+  let i = 0;
+  while (n >= 1024 && i < u.length - 1) { n /= 1024; i++; }
+  return n.toFixed(1) + ' ' + u[i];
+}
+function fmtETA(s) {
+  if (!s || s <= 0) return '—';
+  const h = Math.floor(s/3600), m = Math.floor((s%3600)/60), sec = s%60;
+  if (h) return `${h}h ${m}m`;
+  if (m) return `${m}m ${sec}s`;
+  return `${sec}s`;
+}
+
+function taskCard(t, isTorrent = false) {
+  const status  = t.status || 'queued';
+  const prog    = t.progress || 0;
+  const speed   = isTorrent ? fmtBytes(t.speed_dl||0) : fmtBytes(t.speed||0);
+  const eta     = fmtETA(t.eta || 0);
+  const total   = fmtBytes(t.total_size || t.total || 0);
+  const done    = fmtBytes(t.downloaded || t.done || 0);
+  const name    = t.filename || t.name || t.id.slice(0,16)+'…';
+  const url     = t.url || (isTorrent ? '🔄 BitTorrent' : '');
+  const canPause  = status === 'downloading';
+  const canResume = status === 'paused' || status === 'failed';
+  const canCancel = !['completed','cancelled'].includes(status);
+
+  return `
+  <div class="dl-card ${status}" id="card-${t.id}">
+    <div class="dl-top">
+      <div class="dl-icon">${isTorrent ? '🔄' : fileIcon(name)}</div>
+      <div class="dl-info">
+        <div class="dl-name" title="${name}">${name}</div>
+        <div class="dl-url">${url}</div>
+      </div>
+      <div class="dl-actions">
+        <span class="status-badge ${status}">${status}</span>
+        ${canPause  ? `<div class="icon-btn" onclick="pause('${t.id}')" title="Pause">⏸</div>` : ''}
+        ${canResume ? `<div class="icon-btn" onclick="resume('${t.id}')" title="Resume">▶</div>` : ''}
+        ${canCancel ? `<div class="icon-btn danger" onclick="cancel('${t.id}')" title="Cancel">✕</div>` : ''}
+        <div class="icon-btn danger" onclick="remove('${t.id}')" title="Remove">🗑</div>
+      </div>
+    </div>
+    ${status !== 'queued' ? `
+    <div class="dl-progress-row">
+      <div class="dl-bar-wrap"><div class="dl-bar" style="width:${prog}%"></div></div>
+      <div class="dl-pct">${prog.toFixed(1)}%</div>
+    </div>` : ''}
+    <div class="dl-meta">
+      <span>⬇ ${done} / ${total}</span>
+      ${speed !== '—' ? `<span>🚀 ${speed}/s</span>` : ''}
+      ${eta !== '—'   ? `<span>⏱ ${eta}</span>` : ''}
+      ${isTorrent && (t.peers||0) > 0 ? `<span>👥 ${t.peers} peers</span>` : ''}
+      ${t.category ? `<span>🏷 ${t.category}</span>` : ''}
+      ${t.error ? `<span style="color:var(--danger)">⚠ ${t.error}</span>` : ''}
+    </div>
+  </div>`;
+}
+
+function visibleTasks() {
+  let tasks = [...allTasks.map(t => ({...t, _torrent: false})),
+               ...allTorrents.map(t => ({...t, _torrent: true}))];
+
+  if (currentFilter === 'all') { /* all */ }
+  else if (currentFilter.startsWith('cat-')) {
+    const cat = currentFilter.slice(4);
+    tasks = tasks.filter(t => t.category === cat || (cat === 'Torrent' && t._torrent));
+  } else {
+    tasks = tasks.filter(t => t.status === currentFilter);
+  }
+
+  if (searchQuery) {
+    const q = searchQuery.toLowerCase();
+    tasks = tasks.filter(t =>
+      (t.filename||'').toLowerCase().includes(q) ||
+      (t.url||'').toLowerCase().includes(q) ||
+      (t.name||'').toLowerCase().includes(q)
+    );
+  }
+  return tasks;
+}
+
+function render() {
+  // Badges
+  const counts = {};
+  [...allTasks, ...allTorrents].forEach(t => {
+    counts[t.status] = (counts[t.status] || 0) + 1;
+    counts.all = (counts.all || 0) + 1;
+  });
+  ['all','downloading','queued','completed','paused','failed'].forEach(s => {
+    const el = document.getElementById('badge-' + s);
+    if (el) el.textContent = counts[s] || 0;
+  });
+
+  // Header stats
+  const active = allTasks.filter(t => t.status === 'downloading');
+  const totalSpeed = active.reduce((s,t) => s + (t.speed||0), 0);
+  document.getElementById('hdr-active').textContent = active.length + ' active';
+  document.getElementById('hdr-speed').textContent  = fmtBytes(totalSpeed) + '/s';
+  document.getElementById('hdr-total').textContent  = (allTasks.length + allTorrents.length) + ' files';
+
+  // List
+  const tasks = visibleTasks();
+  const list  = document.getElementById('download-list');
+  if (!tasks.length) {
+    list.innerHTML = `
+    <div class="empty">
+      <div class="empty-icon">📭</div>
+      <h3>No downloads here</h3>
+      <p>Click <strong>+ New Download</strong> to add a URL, magnet link, or .torrent file.</p>
+    </div>`;
+    return;
+  }
+  list.innerHTML = tasks.map(t => taskCard(t, t._torrent)).join('');
+}
+
+// ── Actions ──────────────────────────────────────────────────────────────
+async function pause(id) {
+  await apiPost(`/downloads/${id}/pause`);
+  toast('Download paused', 'info');
+}
+async function resume(id) {
+  await apiPost(`/downloads/${id}/resume`);
+  toast('Download resumed', 'info');
+}
+async function cancel(id) {
+  await apiPost(`/downloads/${id}/cancel`);
+  toast('Download cancelled', 'info');
+}
+async function remove(id) {
+  await apiDel(`/downloads/${id}`);
+  allTasks    = allTasks.filter(t => t.id !== id);
+  allTorrents = allTorrents.filter(t => t.id !== id);
+  render();
+  toast('Removed', 'info');
+}
+async function pauseAll() {
+  const active = allTasks.filter(t => t.status === 'downloading');
+  await Promise.all(active.map(t => apiPost(`/downloads/${t.id}/pause`)));
+  toast(`Paused ${active.length} downloads`, 'info');
+}
+async function resumeAll() {
+  const paused = allTasks.filter(t => t.status === 'paused');
+  await Promise.all(paused.map(t => apiPost(`/downloads/${t.id}/resume`)));
+  toast(`Resumed ${paused.length} downloads`, 'info');
+}
+
+// ── Modal ────────────────────────────────────────────────────────────────
+let activeTab = 'http';
+
+function openModal()  { document.getElementById('modal').classList.add('open'); }
+function closeModal() { document.getElementById('modal').classList.remove('open'); }
+
+document.getElementById('btn-add-download').onclick = openModal;
+document.getElementById('modal-close').onclick      = closeModal;
+document.getElementById('modal-cancel').onclick     = closeModal;
+document.getElementById('btn-pause-all').onclick    = pauseAll;
+document.getElementById('btn-resume-all').onclick   = resumeAll;
+
+// Tabs
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.onclick = () => {
+    activeTab = btn.dataset.tab;
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('tab-' + activeTab).classList.add('active');
+  };
+});
+
+// Torrent drag/drop
+const dropZone = document.getElementById('torrent-drop');
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+dropZone.addEventListener('drop', e => {
+  e.preventDefault(); dropZone.classList.remove('drag-over');
+  const f = e.dataTransfer.files[0];
+  if (f) { document.getElementById('torrent-file').files = e.dataTransfer.files; showTorrentName(f.name); }
+});
+document.getElementById('torrent-file').onchange = e => {
+  if (e.target.files[0]) showTorrentName(e.target.files[0].name);
+};
+function showTorrentName(n) {
+  document.getElementById('torrent-selected').textContent = '📄 ' + n;
+}
+
+// Submit
+document.getElementById('modal-submit').onclick = async () => {
+  if (activeTab === 'http') {
+    const url = document.getElementById('input-url').value.trim();
+    if (!url) return toast('Enter a URL', 'error');
+    const body = {
+      url,
+      filename: document.getElementById('input-filename').value.trim(),
+      category: document.getElementById('input-category').value,
+      threads:  parseInt(document.getElementById('input-threads').value),
+    };
+    const r = await apiPost('/downloads', body);
+    if (r.error) return toast(r.error, 'error');
+    toast('Download started: ' + (r.filename || url.slice(-30)), 'success');
+    closeModal();
+    document.getElementById('input-url').value = '';
+    document.getElementById('input-filename').value = '';
+
+  } else if (activeTab === 'magnet') {
+    const uri = document.getElementById('input-magnet').value.trim();
+    if (!uri.startsWith('magnet:')) return toast('Enter a valid magnet link', 'error');
+    const r = await apiPost('/downloads', { url: uri });
+    if (r.error) return toast(r.error, 'error');
+    toast('Torrent added', 'success');
+    closeModal();
+    document.getElementById('input-magnet').value = '';
+
+  } else if (activeTab === 'torrent') {
+    const file = document.getElementById('torrent-file').files[0];
+    if (!file) return toast('Select a .torrent file', 'error');
+    const fd = new FormData();
+    fd.append('file', file);
+    const r = await fetch(API + '/torrents/upload', { method: 'POST', body: fd });
+    const d = await r.json();
+    if (d.error) return toast(d.error, 'error');
+    toast('Torrent added: ' + (d.name || file.name), 'success');
+    closeModal();
+  }
+};
+
+// Close on overlay click
+document.getElementById('modal').onclick = e => {
+  if (e.target === document.getElementById('modal')) closeModal();
+};
+
+// ── Filter nav ────────────────────────────────────────────────────────────
+document.querySelectorAll('.nav-item').forEach(item => {
+  item.onclick = () => {
+    document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+    item.classList.add('active');
+    currentFilter = item.dataset.filter;
+    render();
+  };
+});
+
+// ── Search ────────────────────────────────────────────────────────────────
+document.getElementById('search-input').oninput = e => {
+  searchQuery = e.target.value.trim();
+  render();
+};
+
+// ── Toast ─────────────────────────────────────────────────────────────────
+function toast(msg, type = 'info') {
+  const icons = { success: '✅', error: '❌', info: 'ℹ️' };
+  const el = document.createElement('div');
+  el.className = `toast ${type}`;
+  el.innerHTML = `<span>${icons[type]||'ℹ️'}</span><span>${msg}</span>`;
+  document.getElementById('toast-container').appendChild(el);
+  setTimeout(() => el.remove(), 3500);
+}
+
+// ── Keyboard shortcut ─────────────────────────────────────────────────────
+document.addEventListener('keydown', e => {
+  if ((e.metaKey || e.ctrlKey) && e.key === 'n') { e.preventDefault(); openModal(); }
+  if (e.key === 'Escape') closeModal();
+});
+
+// ── Boot ──────────────────────────────────────────────────────────────────
+startSSE();
+pollFallback(); // initial load
+</script>
+</body>
+</html>

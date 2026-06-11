@@ -1,0 +1,40 @@
+name: Build Windows EXE
+
+on:
+  push:
+    branches: [ main, master ]
+  workflow_dispatch:   # also allows manual trigger from Actions tab
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install requests flask flask-cors pyinstaller
+
+      - name: Build EXE with PyInstaller
+        run: |
+          pyinstaller FreeDL.spec --distpath dist --workpath build --noconfirm
+
+      - name: Verify EXE exists
+        run: |
+          dir dist
+          echo "Build complete!"
+
+      - name: Upload EXE as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: FreeDL-Windows-EXE
+          path: dist/FreeDL.exe
+          retention-days: 30
