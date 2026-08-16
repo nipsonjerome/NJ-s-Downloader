@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 # FreeDL — Download Manager Engine
 
 A Python download manager modelled after FDM (Free Download Manager) with:
